@@ -12,6 +12,10 @@ export const auth = betterAuth({
   database: mongodbAdapter(db, {
     client
   }),
+  trustedOrigins: [
+    'http://localhost:3000',
+    'http://127.0.0.1:3000'
+  ],
   user: {
     modelName: "users",
     additionalFields: {
