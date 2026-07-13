@@ -182,6 +182,63 @@ app.post('/api/auth/login', async (req, res) => {
   }
 });
 
+// User Google Login
+app.post('/api/auth/google-login', async (req, res) => {
+  const { email, name, avatar } = req.body;
+
+  if (!email || !name) {
+    return res.status(400).send({ message: 'Email and name are required' });
+  }
+
+  try {
+    let user = await usersCollection.findOne({ email });
+
+    if (!user) {
+      // Create new user for Google login with default fields
+      const hashedPassword = await bcrypt.hash(Math.random().toString(36).substring(2, 10), 10);
+      const newUser = {
+        email,
+        name,
+        avatar: avatar || 'https://i.ibb.co/Mgs9DkB/default-avatar.png',
+        bloodGroup: 'A+', // Default
+        district: 'Dhaka', // Default
+        upazila: 'Dhamrai', // Default
+        password: hashedPassword,
+        role: 'donor',
+        status: 'active',
+        createdAt: new Date()
+      };
+
+      const result = await usersCollection.insertOne(newUser);
+      user = {
+        _id: result.insertedId,
+        ...newUser
+      };
+    }
+
+    // Create token
+    const token = jwt.sign({ id: user._id, email: user.email }, process.env.JWT_SECRET, { expiresIn: '7d' });
+
+    res.send({
+      token,
+      user: {
+        id: user._id,
+        email: user.email,
+        name: user.name,
+        avatar: user.avatar,
+        bloodGroup: user.bloodGroup,
+        district: user.district,
+        upazila: user.upazila,
+        role: user.role,
+        status: user.status
+      }
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).send({ message: 'Server error during Google login' });
+  }
+});
+
 // Get Logged In User Profile
 app.get('/api/users/profile', verifyToken, async (req, res) => {
   try {
