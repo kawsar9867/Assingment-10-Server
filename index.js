@@ -11,10 +11,23 @@ const port = process.env.PORT || 5000;
 
 // Middleware
 app.use(cors({
-  origin: '*', // For development. You can update this for production later.
+  origin: ['http://localhost:3000', 'http://127.0.0.1:3000'],
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
   credentials: true
 }));
+
+// Setup Better Auth Handler placeholders
+let authInstance;
+let betterAuthHandler;
+
+app.use('/api/auth', (req, res, next) => {
+  if (betterAuthHandler) {
+    betterAuthHandler(req, res, next);
+  } else {
+    res.status(503).send({ message: "Auth service initializing, please try again shortly." });
+  }
+});
+
 app.use(express.json());
 
 // Stripe init
@@ -39,26 +52,44 @@ async function run() {
     fundsCollection = db.collection('funds');
 
     console.log("Connected successfully to MongoDB");
+
+    // Dynamically load Better Auth
+    const authModule = await import('./auth.mjs');
+    const nodeHandlerModule = await import('better-auth/node');
+    authInstance = authModule.auth;
+    betterAuthHandler = nodeHandlerModule.toNodeHandler(authInstance);
+    console.log("Better Auth initialized successfully");
   } catch (error) {
-    console.error("Failed to connect to MongoDB", error);
+    console.error("Failed to connect to MongoDB or initialize Better Auth", error);
   }
 }
 run();
 
-// JWT Middleware
-const verifyToken = (req, res, next) => {
-  const authHeader = req.headers.authorization;
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return res.status(401).send({ message: 'Unauthorized access' });
-  }
-  const token = authHeader.split(' ')[1];
-  jwt.verify(token, process.env.JWT_SECRET, (err, decoded) => {
-    if (err) {
-      return res.status(403).send({ message: 'Forbidden access' });
+// Better Auth Session Middleware
+const verifyToken = async (req, res, next) => {
+  try {
+    if (!authInstance) {
+      return res.status(503).send({ message: 'Auth service not ready yet' });
     }
-    req.decoded = decoded;
+
+    const session = await authInstance.api.getSession({
+      headers: req.headers
+    });
+
+    if (!session) {
+      return res.status(401).send({ message: 'Unauthorized access' });
+    }
+
+    req.decoded = {
+      id: session.user.id,
+      email: session.user.email
+    };
+    req.user = session.user;
     next();
-  });
+  } catch (error) {
+    console.error("verifyToken error:", error);
+    return res.status(403).send({ message: 'Forbidden access' });
+  }
 };
 
 // Admin Verification Middleware
