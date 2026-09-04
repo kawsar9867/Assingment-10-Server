@@ -202,11 +202,10 @@ app.use("/api/auth", async (req, res, next) => {
   try {
     await ensureInitialized();
     if (betterAuthHandler) {
-      if (process.env.VERCEL || req.headers["x-forwarded-host"] || process.env.NODE_ENV !== "development") {
-        const targetHost = req.headers["x-forwarded-host"] || "assingment-10-server.vercel.app";
-        req.headers.host = targetHost;
-        req.headers["x-forwarded-proto"] = "https";
-      }
+      delete req.headers[":authority"];
+      req.headers["x-forwarded-proto"] = "https";
+      req.headers["x-forwarded-host"] = "assingment-10-server.vercel.app";
+      req.headers["host"] = "assingment-10-server.vercel.app";
       return betterAuthHandler(req, res, next);
     }
     res.status(503).json({ message: "Auth service initializing..." });
