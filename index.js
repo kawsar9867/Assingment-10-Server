@@ -172,8 +172,18 @@ async function run() {
     const { mongodbAdapter } = await import("better-auth/adapters/mongodb");
     const { toNodeHandler } = await import("better-auth/node");
 
+    const serverBaseUrl =
+      process.env.BETTER_AUTH_URL ||
+      (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null) ||
+      (process.env.NODE_ENV === "production"
+        ? "https://assingment-10-server.vercel.app"
+        : "http://localhost:5000");
+
+    console.log("Better Auth Base URL configured as:", serverBaseUrl);
+
     // Initialize Better Auth
     authInstance = betterAuth({
+      baseURL: serverBaseUrl,
       database: mongodbAdapter(db),
       user: {
         modelName: "users",
