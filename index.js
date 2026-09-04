@@ -7,6 +7,7 @@ const stripe = require("stripe");
 require("dotenv").config();
 
 const app = express();
+app.set("trust proxy", true);
 const port = process.env.PORT || 5000;
 
 // Middleware
@@ -206,6 +207,11 @@ app.use("/api/auth", async (req, res, next) => {
   try {
     await ensureInitialized();
     if (betterAuthHandler) {
+      if (process.env.VERCEL || req.headers["x-forwarded-host"] || process.env.NODE_ENV !== "development") {
+        const targetHost = req.headers["x-forwarded-host"] || "assingment-10-server.vercel.app";
+        req.headers.host = targetHost;
+        req.headers["x-forwarded-proto"] = "https";
+      }
       return betterAuthHandler(req, res, next);
     }
     res.status(503).json({ message: "Auth service initializing..." });
