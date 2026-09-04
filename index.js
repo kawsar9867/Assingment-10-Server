@@ -37,197 +37,102 @@ app.use(
 // Setup Better Auth Handler placeholders
 let authInstance;
 let betterAuthHandler;
-
-// Better Auth middleware
-// Better Auth middleware with proper error handling
-app.use("/api/auth", (req, res, next) => {
-  if (betterAuthHandler) {
-    // Log for debugging
-    console.log("Auth request received:", req.method, req.path);
-    betterAuthHandler(req, res, next);
-  } else {
-    res.status(503).send({
-      message: "Auth service initializing, please try again shortly.",
-    });
-  }
-});
-
-app.use(express.json());
-
-// Stripe init
-const stripeClient = stripe(process.env.STRIPE_SECRET_KEY);
-
-// MongoDB Client Connection
 let client;
 let db;
 let usersCollection;
 let donationRequestsCollection;
 let fundsCollection;
 
-async function run() {
-  try {
-    // Connect to MongoDB
-    client = new MongoClient(
-      process.env.MONGODB_URI || "mongodb://localhost:27017",
-    );
-   // await client.connect(); 
+let initPromise = null;
 
-    db = client.db("blood_donation_db");
-    usersCollection = db.collection("users");
-    donationRequestsCollection = db.collection("donationRequests");
-    fundsCollection = db.collection("funds");
+async function ensureInitialized() {
+  if (betterAuthHandler && db) return;
+  if (initPromise) return initPromise;
 
-    console.log("Connected successfully to MongoDB");
+  initPromise = (async () => {
+    try {
+      if (!client) {
+        client = new MongoClient(
+          process.env.MONGODB_URI || "mongodb://localhost:27017"
+        );
+      }
 
-    // Ensure Admin Account exists
-    const adminEmail = "kawsarbosuniya52@gmail.com";
-    const adminPasswordHash = await bcrypt.hash("kawsar123", 10);
-    await usersCollection.updateOne(
-      { email: adminEmail },
-      {
-        $set: {
-          email: adminEmail,
-          name: "Kawsar Bosuniya (Admin)",
-          avatar: "https://i.ibb.co/Mgs9DkB/default-avatar.png",
-          bloodGroup: "O+",
-          district: "Dhaka",
-          upazila: "Dhamrai",
-          password: adminPasswordHash,
-          role: "admin",
-          status: "active",
-        },
-        $setOnInsert: {
-          createdAt: new Date(),
-        },
-      },
-      { upsert: true },
-    );
-    console.log("Admin account ready.");
+      db = client.db("blood_donation_db");
+      usersCollection = db.collection("users");
+      donationRequestsCollection = db.collection("donationRequests");
+      fundsCollection = db.collection("funds");
 
-    // Seed sample blood donation requests if empty
-    const countRequests = await donationRequestsCollection.countDocuments();
-    if (countRequests === 0) {
-      const sampleRequests = [
-        {
-          requesterName: "Rahim Ahmed",
-          requesterEmail: "client@lifeblood.org",
-          recipientName: "Sumi Akter",
-          recipientDistrict: "Dhaka",
-          recipientUpazila: "Dhamrai",
-          hospitalName: "Dhaka Medical College Hospital",
-          fullAddress: "Zahir Raihan Rd, Dhaka 1000",
-          bloodGroup: "A+",
-          donationDate: new Date(Date.now() + 86400000 * 2),
-          donationTime: "10:30 AM",
-          requestMessage:
-            "Emergency blood needed for surgical operation. Please help if you match A+.",
-          status: "pending",
-          donorName: null,
-          donorEmail: null,
-          createdAt: new Date(),
-        },
-        {
-          requesterName: "Karim Ullah",
-          requesterEmail: "client@lifeblood.org",
-          recipientName: "Tanvir Hossain",
-          recipientDistrict: "Chittagong",
-          recipientUpazila: "Patiya",
-          hospitalName: "Chittagong Medical College Hospital",
-          fullAddress: "KB Fazlul Kader Rd, Chittagong",
-          bloodGroup: "O-",
-          donationDate: new Date(Date.now() + 86400000 * 3),
-          donationTime: "02:00 PM",
-          requestMessage:
-            "Urgent O- negative blood required for accident victim. Blood bank has no stock.",
-          status: "pending",
-          donorName: null,
-          donorEmail: null,
-          createdAt: new Date(),
-        },
-        {
-          requesterName: "Nusrat Jahan",
-          requesterEmail: "client@lifeblood.org",
-          recipientName: "Ayesha Begum",
-          recipientDistrict: "Sylhet",
-          recipientUpazila: "Sylhet Sadar",
-          hospitalName: "MAG Osmani Medical College",
-          fullAddress: "Medical Road, Sylhet",
-          bloodGroup: "B+",
-          donationDate: new Date(Date.now() + 86400000 * 1),
-          donationTime: "11:00 AM",
-          requestMessage:
-            "B+ blood needed for thalassemia patient routine transfusion.",
-          status: "pending",
-          donorName: null,
-          donorEmail: null,
-          createdAt: new Date(),
-        },
-      ];
-      await donationRequestsCollection.insertMany(sampleRequests);
-      console.log("Sample blood donation requests seeded successfully.");
-    }
+      console.log("Connected successfully to MongoDB");
 
-    // Dynamically import Better Auth
-    const { betterAuth } = await import("better-auth");
-    const { mongodbAdapter } = await import("better-auth/adapters/mongodb");
-    const { toNodeHandler } = await import("better-auth/node");
+      // Ensure Admin Account exists
+      try {
+        const adminEmail = "kawsarbosuniya52@gmail.com";
+        const adminPasswordHash = await bcrypt.hash("kawsar123", 10);
+        await usersCollection.updateOne(
+          { email: adminEmail },
+          {
+            $set: {
+              email: adminEmail,
+              name: "Kawsar Bosuniya (Admin)",
+              avatar: "https://i.ibb.co/Mgs9DkB/default-avatar.png",
+              bloodGroup: "O+",
+              district: "Dhaka",
+              upazila: "Dhamrai",
+              password: adminPasswordHash,
+              role: "admin",
+              status: "active",
+            },
+            $setOnInsert: {
+              createdAt: new Date(),
+            },
+          },
+          { upsert: true }
+        );
+        console.log("Admin account ready.");
+      } catch (adminErr) {
+        console.warn("Admin check warning:", adminErr.message);
+      }
 
-    const serverBaseUrl =
-      process.env.BETTER_AUTH_URL ||
-      (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null) ||
-      (process.env.NODE_ENV === "production"
-        ? "https://assingment-10-server.vercel.app"
-        : "http://localhost:5000");
+      if (!betterAuthHandler) {
+        const { betterAuth } = await import("better-auth");
+        const { mongodbAdapter } = await import("better-auth/adapters/mongodb");
+        const { toNodeHandler } = await import("better-auth/node");
 
-    console.log("Better Auth Base URL configured as:", serverBaseUrl);
+        const serverBaseUrl =
+          process.env.BETTER_AUTH_URL ||
+          (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null) ||
+          (process.env.NODE_ENV === "production"
+            ? "https://assingment-10-server.vercel.app"
+            : "http://localhost:5000");
 
-    // Initialize Better Auth
-    authInstance = betterAuth({
-      baseURL: serverBaseUrl,
-      database: mongodbAdapter(db),
-      user: {
-        modelName: "users",
-        additionalFields: {
-          bloodGroup: { type: "string", required: false, input: true },
-          district: { type: "string", required: false, input: true },
-          upazila: { type: "string", required: false, input: true },
-          role: { type: "string", defaultValue: "donor", input: true },
-          status: { type: "string", defaultValue: "active", input: true },
-          avatar: { type: "string", required: false, input: true },
-        },
-      },
-      socialProviders: {
-        google: {
-          clientId: process.env.GOOGLE_CLIENT_ID,
-          clientSecret: process.env.GOOGLE_SECRET,
-        },
-      },
-      emailAndPassword: {
-        enabled: true,
-        disableSignUp: false,
-        requireEmailVerification: false,
-      },
-      trustedOrigins: [
-        "https://blood-donation-seven-rose.vercel.app",
-        "https://blood-donation.vercel.app",
-        "https://assingment-10-server.vercel.app",
-        process.env.CLIENT_URL,
-        process.env.BETTER_AUTH_URL,
-        process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null,
-        "http://localhost:3000",
-        "http://localhost:3001",
-        "http://127.0.0.1:3000",
-        "http://127.0.0.1:3001",
-        "http://localhost:5173",
-        "http://localhost:5174",
-      ].filter(Boolean),
-      advanced: {
-        defaultCookieAttributes: {
-          sameSite: "none",
-          secure: true,
-        },
-        cors: {
-          origin: [
+        console.log("Better Auth Base URL configured as:", serverBaseUrl);
+
+        authInstance = betterAuth({
+          baseURL: serverBaseUrl,
+          database: mongodbAdapter(db),
+          user: {
+            modelName: "users",
+            additionalFields: {
+              bloodGroup: { type: "string", required: false, input: true },
+              district: { type: "string", required: false, input: true },
+              upazila: { type: "string", required: false, input: true },
+              role: { type: "string", defaultValue: "donor", input: true },
+              status: { type: "string", defaultValue: "active", input: true },
+              avatar: { type: "string", required: false, input: true },
+            },
+          },
+          socialProviders: {
+            google: {
+              clientId: process.env.GOOGLE_CLIENT_ID,
+              clientSecret: process.env.GOOGLE_SECRET,
+            },
+          },
+          emailAndPassword: {
+            enabled: true,
+            disableSignUp: false,
+            requireEmailVerification: false,
+          },
+          trustedOrigins: [
             "https://blood-donation-seven-rose.vercel.app",
             "https://blood-donation.vercel.app",
             "https://assingment-10-server.vercel.app",
@@ -241,33 +146,85 @@ async function run() {
             "http://localhost:5173",
             "http://localhost:5174",
           ].filter(Boolean),
-          methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-          credentials: true,
-        },
-      },
-    });
+          advanced: {
+            defaultCookieAttributes: {
+              sameSite: "none",
+              secure: true,
+            },
+            cors: {
+              origin: [
+                "https://blood-donation-seven-rose.vercel.app",
+                "https://blood-donation.vercel.app",
+                "https://assingment-10-server.vercel.app",
+                process.env.CLIENT_URL,
+                process.env.BETTER_AUTH_URL,
+                process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null,
+                "http://localhost:3000",
+                "http://localhost:3001",
+                "http://127.0.0.1:3000",
+                "http://127.0.0.1:3001",
+                "http://localhost:5173",
+                "http://localhost:5174",
+              ].filter(Boolean),
+              methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+              credentials: true,
+            },
+          },
+        });
 
-    betterAuthHandler = toNodeHandler(authInstance);
+        betterAuthHandler = toNodeHandler(authInstance);
+        console.log("Better Auth initialized successfully");
+      }
+    } catch (error) {
+      console.error("Initialization error:", error);
+      initPromise = null;
+      throw error;
+    }
+  })();
 
-    console.log("Better Auth initialized successfully");
+  return initPromise;
+}
 
-    // Start server after everything is initialized
+// Global initialization middleware
+app.use(async (req, res, next) => {
+  try {
+    await ensureInitialized();
+    next();
+  } catch (err) {
+    console.error("Global init error:", err);
+    res.status(500).json({ error: "Server initialization error", details: err.message });
+  }
+});
+
+// Better Auth middleware
+app.use("/api/auth", async (req, res, next) => {
+  try {
+    await ensureInitialized();
+    if (betterAuthHandler) {
+      return betterAuthHandler(req, res, next);
+    }
+    res.status(503).json({ message: "Auth service initializing..." });
+  } catch (err) {
+    console.error("Auth middleware error:", err);
+    res.status(500).json({ error: "Auth handler error", details: err.message });
+  }
+});
+
+app.use(express.json());
+
+// Stripe init
+const stripeClient = stripe(process.env.STRIPE_SECRET_KEY);
+
+// Start server locally if not on Vercel
+if (!process.env.VERCEL) {
+  ensureInitialized().then(() => {
     app.listen(port, () => {
       console.log(`Server is running on port ${port}`);
     });
-  } catch (error) {
-    console.error(
-      "Failed to connect to MongoDB or initialize Better Auth",
-      error,
-    );
-    process.exit(1);
-  }
+  }).catch(console.error);
 }
 
-// Start the application
-run().catch(console.error);
-
-// Export for testing or other uses
+// Export for Vercel Serverless
 module.exports = app;
 
 // Better Auth Session Middleware
