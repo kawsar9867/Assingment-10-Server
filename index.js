@@ -25,7 +25,6 @@ app.use(
   }),
 );
 
-// Handle preflight requests automatically via cors middleware above
 
 // Setup Better Auth Handler placeholders
 let authInstance;
@@ -63,7 +62,7 @@ async function run() {
     client = new MongoClient(
       process.env.MONGODB_URI || "mongodb://localhost:27017",
     );
-    await client.connect(); // Add this line - it was missing!
+   // await client.connect(); 
 
     db = client.db("blood_donation_db");
     usersCollection = db.collection("users");
@@ -200,6 +199,10 @@ async function run() {
         "http://localhost:5174",
       ],
       advanced: {
+        defaultCookieAttributes: {
+          sameSite: "none",
+          secure: true,
+        },
         cors: {
           origin: [
             "https://blood-donation-seven-rose.vercel.app",
@@ -210,7 +213,7 @@ async function run() {
             "http://localhost:5173",
             "http://localhost:5174",
           ],
-          methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
+          methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
           credentials: true,
         },
       },
