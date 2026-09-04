@@ -5,6 +5,7 @@ const jwt = require("jsonwebtoken");
 const bcrypt = require("bcryptjs");
 const stripe = require("stripe");
 require("dotenv").config();
+process.env.BETTER_AUTH_URL = "https://assingment-10-server.vercel.app";
 
 const app = express();
 app.set("trust proxy", true);
@@ -99,13 +100,7 @@ async function ensureInitialized() {
         const { mongodbAdapter } = await import("better-auth/adapters/mongodb");
         const { toNodeHandler } = await import("better-auth/node");
 
-        const serverBaseUrl =
-          process.env.NODE_ENV === "development" &&
-          process.env.BETTER_AUTH_URL &&
-          process.env.BETTER_AUTH_URL.includes("localhost")
-            ? process.env.BETTER_AUTH_URL
-            : "https://assingment-10-server.vercel.app";
-
+        const serverBaseUrl = "https://assingment-10-server.vercel.app";
         process.env.BETTER_AUTH_URL = serverBaseUrl;
 
         console.log("Better Auth Base URL configured as:", serverBaseUrl);
