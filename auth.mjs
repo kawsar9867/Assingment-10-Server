@@ -1,4 +1,5 @@
 export const auth = betterAuth({
+  secret: process.env.BETTER_AUTH_SECRET || "wTGMPauVZU9E0RrY52frdjmR7oxX9HRB",
   database: mongodbAdapter(db, {
     client,
   }),

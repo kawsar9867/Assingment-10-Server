@@ -108,6 +108,7 @@ async function ensureInitialized() {
         console.log("Better Auth Base URL configured as:", serverBaseUrl);
 
         authInstance = betterAuth({
+          secret: process.env.BETTER_AUTH_SECRET || "wTGMPauVZU9E0RrY52frdjmR7oxX9HRB",
           baseURL: serverBaseUrl,
           database: mongodbAdapter(db),
           user: {
@@ -125,6 +126,7 @@ async function ensureInitialized() {
             google: {
               clientId: process.env.GOOGLE_CLIENT_ID,
               clientSecret: process.env.GOOGLE_SECRET,
+              disableStateCheck: true,
             },
           },
           emailAndPassword: {
