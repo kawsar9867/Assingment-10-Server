@@ -6,10 +6,6 @@ const bcrypt = require("bcryptjs");
 const stripe = require("stripe");
 require("dotenv").config();
 
-if (process.env.VERCEL || process.env.NODE_ENV === "production" || !process.env.BETTER_AUTH_URL || process.env.BETTER_AUTH_URL.includes("localhost")) {
-  process.env.BETTER_AUTH_URL = "https://assingment-10-server.vercel.app";
-}
-
 const app = express();
 const port = process.env.PORT || 5000;
 
@@ -102,14 +98,14 @@ async function ensureInitialized() {
         const { mongodbAdapter } = await import("better-auth/adapters/mongodb");
         const { toNodeHandler } = await import("better-auth/node");
 
-        const isProduction = Boolean(process.env.VERCEL || process.env.NODE_ENV === "production");
-        let serverBaseUrl = process.env.BETTER_AUTH_URL;
+        const serverBaseUrl =
+          process.env.NODE_ENV === "development" &&
+          process.env.BETTER_AUTH_URL &&
+          process.env.BETTER_AUTH_URL.includes("localhost")
+            ? process.env.BETTER_AUTH_URL
+            : "https://assingment-10-server.vercel.app";
 
-        if (!serverBaseUrl || serverBaseUrl.includes("localhost") || process.env.VERCEL) {
-          serverBaseUrl = isProduction
-            ? "https://assingment-10-server.vercel.app"
-            : "http://localhost:5000";
-        }
+        process.env.BETTER_AUTH_URL = serverBaseUrl;
 
         console.log("Better Auth Base URL configured as:", serverBaseUrl);
 
