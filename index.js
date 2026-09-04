@@ -15,6 +15,8 @@ app.use(
   cors({
     origin: [
       "https://blood-donation-seven-rose.vercel.app",
+      "https://blood-donation.vercel.app",
+      "https://assingment-10-server.vercel.app",
       process.env.CLIENT_URL,
       process.env.BETTER_AUTH_URL,
       process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null,
@@ -197,6 +199,8 @@ async function run() {
       },
       trustedOrigins: [
         "https://blood-donation-seven-rose.vercel.app",
+        "https://blood-donation.vercel.app",
+        "https://assingment-10-server.vercel.app",
         process.env.CLIENT_URL,
         process.env.BETTER_AUTH_URL,
         process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null,
@@ -215,6 +219,8 @@ async function run() {
         cors: {
           origin: [
             "https://blood-donation-seven-rose.vercel.app",
+            "https://blood-donation.vercel.app",
+            "https://assingment-10-server.vercel.app",
             process.env.CLIENT_URL,
             process.env.BETTER_AUTH_URL,
             process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null,
