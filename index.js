@@ -98,12 +98,14 @@ async function ensureInitialized() {
         const { mongodbAdapter } = await import("better-auth/adapters/mongodb");
         const { toNodeHandler } = await import("better-auth/node");
 
-        const serverBaseUrl =
-          process.env.BETTER_AUTH_URL ||
-          (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null) ||
-          (process.env.NODE_ENV === "production"
+        const isProduction = Boolean(process.env.VERCEL || process.env.NODE_ENV === "production");
+        let serverBaseUrl = process.env.BETTER_AUTH_URL;
+
+        if (!serverBaseUrl || serverBaseUrl.includes("localhost") || process.env.VERCEL) {
+          serverBaseUrl = isProduction
             ? "https://assingment-10-server.vercel.app"
-            : "http://localhost:5000");
+            : "http://localhost:5000";
+        }
 
         console.log("Better Auth Base URL configured as:", serverBaseUrl);
 
