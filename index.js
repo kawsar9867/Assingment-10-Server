@@ -15,10 +15,16 @@ app.use(
   cors({
     origin: [
       "https://blood-donation-seven-rose.vercel.app",
+      process.env.CLIENT_URL,
+      process.env.BETTER_AUTH_URL,
+      process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null,
       "http://localhost:3000",
-      "http://localhost:5173", // Add your actual frontend port
+      "http://localhost:3001",
+      "http://127.0.0.1:3000",
+      "http://127.0.0.1:3001",
+      "http://localhost:5173",
       "http://localhost:5174",
-    ],
+    ].filter(Boolean),
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     credentials: true,
     allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
@@ -191,13 +197,16 @@ async function run() {
       },
       trustedOrigins: [
         "https://blood-donation-seven-rose.vercel.app",
+        process.env.CLIENT_URL,
+        process.env.BETTER_AUTH_URL,
+        process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null,
         "http://localhost:3000",
         "http://localhost:3001",
         "http://127.0.0.1:3000",
         "http://127.0.0.1:3001",
         "http://localhost:5173",
         "http://localhost:5174",
-      ],
+      ].filter(Boolean),
       advanced: {
         defaultCookieAttributes: {
           sameSite: "none",
@@ -206,13 +215,16 @@ async function run() {
         cors: {
           origin: [
             "https://blood-donation-seven-rose.vercel.app",
+            process.env.CLIENT_URL,
+            process.env.BETTER_AUTH_URL,
+            process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null,
             "http://localhost:3000",
             "http://localhost:3001",
             "http://127.0.0.1:3000",
             "http://127.0.0.1:3001",
             "http://localhost:5173",
             "http://localhost:5174",
-          ],
+          ].filter(Boolean),
           methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
           credentials: true,
         },
