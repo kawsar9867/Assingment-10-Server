@@ -6,6 +6,10 @@ const bcrypt = require("bcryptjs");
 const stripe = require("stripe");
 require("dotenv").config();
 
+if (process.env.VERCEL || process.env.NODE_ENV === "production" || !process.env.BETTER_AUTH_URL || process.env.BETTER_AUTH_URL.includes("localhost")) {
+  process.env.BETTER_AUTH_URL = "https://assingment-10-server.vercel.app";
+}
+
 const app = express();
 const port = process.env.PORT || 5000;
 
@@ -128,6 +132,7 @@ async function ensureInitialized() {
             google: {
               clientId: process.env.GOOGLE_CLIENT_ID,
               clientSecret: process.env.GOOGLE_SECRET,
+              redirectURI: `${serverBaseUrl}/api/auth/callback/google`,
               disableStateCheck: true,
             },
           },
